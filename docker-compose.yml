@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  deployment-agent:
+    build: .
+    image: registry.example.com/deployment-agent:latest
+    container_name: deployment-agent
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./deployment_config.yaml:/app/deployment_config.yaml
+      - ./logs:/app/logs
+    environment:
+      - ENV=production
+      - PORT=5000
+      - LOG_LEVEL=INFO
+    networks:
+      - agent-network
+
+networks:
+  agent-network:
+    driver: bridge 
