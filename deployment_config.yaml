@@ -1,0 +1,54 @@
+environments:
+  development:
+    url: http://localhost:5000
+    health_check_path: /health
+    deploy_timeout: 300
+    retry_interval: 10
+    max_retries: 3
+    
+  staging:
+    url: http://staging.example.com
+    health_check_path: /health
+    deploy_timeout: 600
+    retry_interval: 20
+    max_retries: 5
+    
+  production:
+    url: http://production.example.com
+    health_check_path: /health
+    deploy_timeout: 900
+    retry_interval: 30
+    max_retries: 5
+
+deployment_steps:
+  - name: backup
+    type: command
+    command: "tar -czf backup.tar.gz src/"
+    
+  - name: install_dependencies
+    type: command
+    command: "pip install -r requirements.txt"
+    
+  - name: run_tests
+    type: command
+    command: "pytest tests/"
+    
+  - name: start_application
+    type: service
+    command: "gunicorn src.app:app"
+    
+  - name: health_check
+    type: http
+    path: "/health"
+    expected_status: 200
+    expected_response:
+      status: "ok"
+
+rollback_steps:
+  - name: stop_application
+    type: service
+    command: "pkill gunicorn"
+    
+  - name: restore_backup
+    type: command
+    command: "tar -xzf backup.tar.gz" 

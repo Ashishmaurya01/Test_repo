@@ -1,0 +1,92 @@
+name: Sample Application Deployment
+version: 1.0
+
+# Environment configurations
+environments:
+  development:
+    branch: develop
+    deploy_to: staging
+    variables:
+      ENV: development
+      API_URL: https://dev-api.example.com
+      
+  staging:
+    branch: staging
+    deploy_to: production
+    variables:
+      ENV: staging
+      API_URL: https://staging-api.example.com
+      
+  production:
+    branch: main
+    deploy_to: null
+    variables:
+      ENV: production
+      API_URL: https://api.example.com
+
+# Deployment flow
+deployment_flow:
+  - name: Checkout Code
+    type: git
+    commands:
+      - git fetch origin
+      - git checkout $BRANCH
+      - git pull origin $BRANCH
+
+  - name: Install Dependencies
+    type: setup
+    commands:
+      - python -m venv .venv
+      - source .venv/bin/activate
+      - pip install -r requirements.txt
+
+  - name: Run Tests
+    type: test
+    commands:
+      - pytest tests/
+    required: true
+    on_failure: stop
+
+  - name: Build Application
+    type: build
+    commands:
+      - python setup.py build
+    artifacts:
+      - dist/*.whl
+
+  - name: Deploy to Environment
+    type: deploy
+    commands:
+      - echo "Deploying to $ENV environment"
+      - ./scripts/deploy.sh $ENV
+
+  - name: Verify Deployment
+    type: verify
+    commands:
+      - curl $API_URL/health
+    timeout: 300
+    retries: 3
+
+# Notifications
+notifications:
+  slack:
+    channel: "#deployments"
+    on_success: true
+    on_failure: true
+    on_start: true
+
+# Rollback configuration
+rollback:
+  enabled: true
+  steps:
+    - git checkout $PREVIOUS_COMMIT
+    - ./scripts/rollback.sh $ENV
+
+# Required tools
+required_tools:
+  - name: python
+    version: ">=3.8"
+  - name: git
+    version: ">=2.0"
+  - name: curl
+    version: ">=7.0" 
